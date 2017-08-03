@@ -14,7 +14,7 @@ import appTemplate from './template.html';
 		active: 'active',
 		favorite: 'favorite'
 	};
-	const data = {
+	let data = {
 		popupData: null,
 		movies: serverData.data.movies,
 		favorites: localStorage.favorites ? localStorage.favorites.split(',') : []
@@ -24,7 +24,7 @@ import appTemplate from './template.html';
 		const colors = d3.schemeCategory20;
 		let width = svgHolder.node().offsetWidth,
 			height = svgHolder.node().offsetHeight,
-			radius = 70;
+			radiusKoef = 3;
 		const svg = svgHolder.append('svg')
 			.attr('width', '100%')
 			.attr('height', '100%');
@@ -32,10 +32,11 @@ import appTemplate from './template.html';
 		const nodes = data.movies.map((item) => {
 			return {
 				item: item,
+				angles: Math.max(3, +item.year.toString().charAt(2)),
 				x: width * Math.random(),
 				y: height * Math.random(),
-				r: radius,
-				inertia: 0.05 + 0.15 * Math.random()
+				r: Math.max(50, item.title.length * radiusKoef),
+				inertia: Math.random() * 0.1 + 0.05
 			};
 		});
 
@@ -60,6 +61,17 @@ import appTemplate from './template.html';
 			node.attr("transform", (d) => {
 				return "translate("+d.x+","+d.y+")";
 			})
+		}
+
+		const getPathData = (d) => {
+			let coords = '';
+			let pieces = 360 / d.angles;
+			for (var i = 0; i < d.angles; i++) {
+				let x = d.r * Math.cos(pieces + ((2*Math.PI * i) / d.angles));
+				let y = d.r * Math.sin(pieces + ((2*Math.PI * i) / d.angles));
+				coords += (i > 0 ? ' L ' : 'M ' ) + x + ' ' + y;
+			}
+			return coords;
 		}
 
 		let simulation = d3.forceSimulation()
@@ -87,10 +99,13 @@ import appTemplate from './template.html';
 			);
 
 		node.append('circle')
-			.style('fill', (d, i) => colors[i])
-			.attr('cx', (d) => -d.r)
-			.attr('cy', (d) => -d.r)
+			.style('fill', 'transparent')
 			.attr('r', (d) => d.r);
+
+		node.append('path')
+			.attr("d", getPathData)
+			.attr("class", "path")
+			.style('fill', (d, i) => colors[i]);
 
 
 		node.append("text")
@@ -99,9 +114,7 @@ import appTemplate from './template.html';
 			.style("text-anchor", "middle")
 			.style("font-size", function(d) {
 				return Math.min(2 * d.r, (2 * d.r) / this.getComputedTextLength() * 15) + "px";
-			})
-			.attr("dx", (d) => -d.r)
-			.attr("dy", (d) => -d.r*0.9);
+			});
 		
 		window.addEventListener('resize', () => {
 			width = svgHolder.node().offsetWidth;
