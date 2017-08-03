@@ -35,7 +35,7 @@ import appTemplate from './template.html';
 				angles: Math.max(3, +item.year.toString().charAt(2)),
 				x: width * Math.random(),
 				y: height * Math.random(),
-				r: Math.max(50, item.title.length * radiusKoef),
+				r: Math.max(70, item.title.length * radiusKoef),
 				inertia: Math.random() * 0.1 + 0.05
 			};
 		});
@@ -74,6 +74,28 @@ import appTemplate from './template.html';
 			return coords;
 		}
 
+		const wrap = (text, width) => {
+			var text = d3.select(this),
+					words = text.text().split(/\s+/).reverse(),
+					word,
+					line = [],
+					lineNumber = 0,
+					lineHeight = 1.1, // ems
+					y = text.attr("y"),
+					dy = parseFloat(text.attr("dy")),
+					tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+			while (word = words.pop()) {
+				line.push(word);
+				tspan.text(line.join(" "));
+				if (tspan.node().getComputedTextLength() > width) {
+					line.pop();
+					tspan.text(line.join(" "));
+					line = [word];
+					tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+				}
+			}
+		};
+
 		let simulation = d3.forceSimulation()
 			.force('attract', forceAttract()
 			.target([width / 2, height / 2])
@@ -108,14 +130,41 @@ import appTemplate from './template.html';
 			.style('fill', (d, i) => colors[i]);
 
 
-		node.append("text")
+		const title = node.append("text")
 			.text((d) => d.item.title)
 			.attr("class", "text")
-			.style("text-anchor", "middle")
-			.style("font-size", function(d) {
-				return Math.min(2 * d.r, (2 * d.r) / this.getComputedTextLength() * 15) + "px";
-			});
-		
+			.style("text-anchor", "middle");
+
+		title.each(function(d) {
+				let text = d3.select(this),
+					words = text.text().split(/\s+/).reverse(),
+					word,
+					line = [],
+					lineNumber = 0,
+					lineHeight = 1,
+					y = text.attr("y") || 0,
+					dy = parseFloat(text.attr("dy")) || -0.4,
+					tspan = text.text(null)
+						.append("tspan")
+						.attr("x", 0)
+						.attr("y", y)
+						.attr("dy", dy + "em");
+			while (word = words.pop()) {
+				line.push(word);
+				tspan.text(line.join(" "));
+				if (tspan.node().getComputedTextLength() > d.r) {
+					line.pop();
+					tspan.text(line.join(" "));
+					line = [word];
+					tspan = text.append("tspan")
+						.attr("x", 0)
+						.attr("y", y)
+						.attr("dy", ++lineNumber * lineHeight + dy + "em")
+						.text(word);
+				}
+			}
+		});
+
 		window.addEventListener('resize', () => {
 			width = svgHolder.node().offsetWidth;
 			height = svgHolder.node().offsetHeight;
