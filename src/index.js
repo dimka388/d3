@@ -1,10 +1,12 @@
 import './style.scss';
 import * as d3 from "d3";
+import { forceAttract } from 'd3-force-attract';
 import serverData from './movies.json';
 import appTemplate from './template.html';
 
 (() => {
 	const holder = d3.select('#wrapper').html(appTemplate);
+	const svgHolder = holder.select('.svg-holder');
 	const bar = holder.select('.top-list');
 	const popup = holder.select('.popup-holder');
 	const popupInfo = popup.select('.info');
@@ -18,6 +20,90 @@ import appTemplate from './template.html';
 		favorites: localStorage.favorites ? localStorage.favorites.split(',') : []
 	};
 
+	const drawSvg = () => {
+		const colors = d3.schemeCategory20;
+		const width = svgHolder.node().offsetWidth,
+			height = svgHolder.node().offsetHeight,
+			radius = 70;
+		const svg = svgHolder.append('svg')
+			.attr('width', '100%')
+			.attr('height', '100%');
+
+		const nodes = data.movies.map((item) => {
+			return {
+				item: item,
+				x: width * Math.random(),
+				y: height * Math.random(),
+				r: radius,
+				inertia: 0.05 + 0.15 * Math.random()
+			};
+		});
+
+		const dragstarted = (d) => {
+			if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+			d.fx = d.x;
+			d.fy = d.y;
+		}
+
+		const dragged = (d) => {
+			d.fx = d3.event.x;
+			d.fy = d3.event.y;
+		}
+
+		const dragended = (d) => {
+			if (!d3.event.active) simulation.alphaTarget(0);
+			d.fx = null;
+			d.fy = null;
+		}
+
+		const layoutTick = (e) => {
+			node.attr("transform", (d) => {
+				return "translate("+d.x+","+d.y+")";
+			})
+		}
+
+		const simulation = d3.forceSimulation()
+			.force('attract', forceAttract()
+			.target([width / 2, height / 2])
+			.strength((d) => d.inertia))
+			.force('collide', d3.forceCollide((d) => d.r))
+			.on('tick', layoutTick)
+			.nodes(nodes);
+
+		const node = svg.selectAll('circle')
+			.data(nodes)
+			.enter()
+			.append('g')
+			.style('cursor','pointer')
+			.on('click', (d) => {
+				data.popupData = d.item;
+				refreshItem();
+				showPopup();
+			})
+			.call(d3.drag()
+				.on('start', dragstarted)
+				.on('drag', dragged)
+				.on('end', dragended)
+			);
+
+		node.append('circle')
+			.style('fill', (d, i) => colors[i])
+			.attr('cx', (d) => -d.r)
+			.attr('cy', (d) => -d.r)
+			.attr('r', (d) => d.r);
+
+
+		node.append("text")
+			.text((d) => d.item.title)
+			.attr("class", "text")
+			.style("text-anchor", "middle")
+			.style("font-size", function(d) {
+				return Math.min(2 * d.r, (2 * d.r) / this.getComputedTextLength() * 15) + "px";
+			})
+			.attr("dx", (d) => -d.r)
+			.attr("dy", (d) => -d.r*0.9);
+
+	};
 	// toggle favorite movie
 	const toggleFavorite = (d) => {
 		let index = data.favorites.indexOf(d.idIMDB);
@@ -125,4 +211,6 @@ import appTemplate from './template.html';
 		.attr('class', 'opener');
 
 	refreshItem();
+	drawSvg();
+
 })();
