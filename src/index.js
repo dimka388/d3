@@ -22,7 +22,7 @@ import appTemplate from './template.html';
 
 	const drawSvg = () => {
 		const colors = d3.schemeCategory20;
-		const width = svgHolder.node().offsetWidth,
+		let width = svgHolder.node().offsetWidth,
 			height = svgHolder.node().offsetHeight,
 			radius = 70;
 		const svg = svgHolder.append('svg')
@@ -62,7 +62,7 @@ import appTemplate from './template.html';
 			})
 		}
 
-		const simulation = d3.forceSimulation()
+		let simulation = d3.forceSimulation()
 			.force('attract', forceAttract()
 			.target([width / 2, height / 2])
 			.strength((d) => d.inertia))
@@ -102,6 +102,18 @@ import appTemplate from './template.html';
 			})
 			.attr("dx", (d) => -d.r)
 			.attr("dy", (d) => -d.r*0.9);
+		
+		window.addEventListener('resize', () => {
+			width = svgHolder.node().offsetWidth;
+			height = svgHolder.node().offsetHeight;
+			simulation = d3.forceSimulation()
+				.force('attract', forceAttract()
+				.target([width / 2, height / 2])
+				.strength((d) => d.inertia))
+				.force('collide', d3.forceCollide((d) => d.r))
+				.on('tick', layoutTick)
+				.nodes(nodes);
+		}, true);
 
 	};
 	// toggle favorite movie
